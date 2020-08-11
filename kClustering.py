@@ -60,6 +60,18 @@ def averageMSE(clusterCenters, clusterMembers):
         msePerCluster.append(currentCenterMSE/len(cluster))
     return sum(msePerCluster)/len(msePerCluster)
 
+def meanSquareSeparation(clusterCenters):
+    total = 0
+    count = (len(clusterCenters) * (len(clusterCenters-1))/2.0)
+
+    for a in clusterCenters:
+        for b in clusterCenters:
+            if (a == b).all():
+                continue
+            total += euclidDistanceSq(a, b)
+    total = total / 2.0 # Since we have duplicates eg. every center is paired twice (AB vs BA)
+    return total/count
+
 # Performs iterations with the trainingSet and an initial np array of clusterCenters until the previous centers and the new centers are the same
 def clusterIterate(trainingSet, clusterCenters):
     clusterList = [[]] * len(clusterCenters)
@@ -79,6 +91,7 @@ def clusterIterate(trainingSet, clusterCenters):
     if compare.all():
         #calculated average mse
         print("AverageMSE:", averageMSE(clusterCenters, clusterList))
+        print("MSS:", meanSquareSeparation(clusterCenters))
                 
         return
     else:
@@ -92,6 +105,6 @@ if __name__ == '__main__':
     # This also assumes that we're running the py script up one level from the optdigits files
     trainingData = open_file('optdigits\\optdigits.train')
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    
+
     centers = init_clusters(10, trainingData)
     clusterIterate(trainingData, centers)
