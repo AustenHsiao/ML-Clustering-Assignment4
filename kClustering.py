@@ -24,17 +24,66 @@ def init_clusters(k, trainingSet):
         centers.append(list(trainingSet[clusterCenter]))
     return np.array(centers)
 
-# Returns the euclidian distance between 2 points. Takes in 2 numpy arrays. 
-# Note that the points include the class denotation on the end, so the summation is up until the last element
-def distance(point1, point2):
+# distance returns the index of the closest center, given 1 data point (point1) and the list of centerpoints
+def minDistanceIndex(point1, listOfCenters):
+    # distanceList contains all of the distances between point1 and every center
+    distanceList = [math.sqrt(np.sum(np.square(np.subtract(point1[:-1], center[:-1])))) for center in listOfCenters]
+
+    # because we iterated through listOfCenters, we can get the closest center point by
+    # finding the index of the minimum distance in the distance list
+    minimum = min(distanceList)
+    minIndex = distanceList.index(min(distanceList))
+
+    # If we have multiple minimums (equal values), randomly choose one 
+    if distanceList.count(minimum) > 1:
+        minIndex = random.choice([i for i in range(len(distanceList)) if distanceList[i] == minimum]) 
+    return minIndex
+
+# returns distance between 2 points
+def euclidDistance(point1, point2):
     return math.sqrt(np.sum(np.square(np.subtract(point1[:-1], point2[:-1]))))
 
-# Performs 'i' number of iterations
-def clusterIterate(i, trainingSet, clusterCenter):
-    print("TRAININGSET", trainingSet[0])
-    print("CENTER", clusterCenter[0])
-    print(distance(trainingSet[0], clusterCenter[0]))
+# returns distance^2 between 2 points
+def euclidDistanceSq(point1, point2):
+    return np.sum(np.square(np.subtract(point1[:-1], point2[:-1])))
 
+# returns the averageMSE given the clusters and datapoints associated with each cluster
+def averageMSE(clusterCenters, clusterMembers):
+    # clusterCenters contains all of the center points (for expt1, there are 10)
+    # clusterMembers contains all of the data points associated with each clusterCenter. clusterMembers[0] will be a list of all points associated with clusterCenters[0]
+
+    msePerCluster = []
+    for cluster,center in zip(clusterMembers,clusterCenters):
+        currentCenterMSE = 0
+        for dataPoint in cluster:
+            currentCenterMSE += euclidDistanceSq(dataPoint, center)
+        msePerCluster.append(currentCenterMSE/len(cluster))
+    return sum(msePerCluster)/len(msePerCluster)
+
+# Performs iterations with the trainingSet and an initial np array of clusterCenters until the previous centers and the new centers are the same
+def clusterIterate(trainingSet, clusterCenters):
+    clusterList = [[]] * len(clusterCenters)
+
+    for data in trainingSet:
+        minIndex = minDistanceIndex(data, clusterCenters)
+        if clusterList[minIndex] == []:
+            clusterList[minIndex] = [data]
+        else:
+            clusterList[minIndex].append(np.array(data))
+
+    # Calculate new cluster centers and update
+    updatedClusterCenters = np.array([np.mean(i, axis=0) for i in clusterList])
+
+    # If the updatedClusters are equal to the original clusters, we're finished looping
+    compare = (updatedClusterCenters == clusterCenters)
+    if compare.all():
+        #calculated average mse
+        print("AverageMSE:", averageMSE(clusterCenters, clusterList))
+                
+        return
+    else:
+        # Otherwise, keep iterating
+        return clusterIterate(trainingSet, updatedClusterCenters)
 
 if __name__ == '__main__':
     # Change this to point to the right working directory. # # # # # # # # # # # #
@@ -43,6 +92,4 @@ if __name__ == '__main__':
 
     trainingData = open_file('optdigits\\optdigits.train')
     centers = init_clusters(10, trainingData)
-
-    clusterIterate(0, trainingData, centers)
-    
+    clusterIterate(trainingData, centers)
