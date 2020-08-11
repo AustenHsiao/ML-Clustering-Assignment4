@@ -89,7 +89,9 @@ if __name__ == '__main__':
     # Change this to point to the right working directory. # # # # # # # # # # # #
     os.chdir('C:\\Users\\Austen\\Desktop\\Sourcefiles\\Python\\Assignment4')
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
+    # This also assumes that we're running the py script up one level from the optdigits files
     trainingData = open_file('optdigits\\optdigits.train')
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    
     centers = init_clusters(10, trainingData)
     clusterIterate(trainingData, centers)
