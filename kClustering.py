@@ -156,7 +156,7 @@ def accuracy(clusterMembers, clusterCenters, testData):
 
 
 # Performs iterations with the trainingSet and an initial np array of clusterCenters until the previous centers and the new centers are the same
-def clusterIterate(trainingSet, clusterCenters, testData):
+def clusterIterate(trainingSet, clusterCenters, testData, loopCount):
     clusterList = [[]] * len(clusterCenters)
 
     for data in trainingSet:
@@ -172,6 +172,7 @@ def clusterIterate(trainingSet, clusterCenters, testData):
     # If the updatedClusters are equal to the original clusters, we're finished looping
     compare = (updatedClusterCenters == clusterCenters)
     if compare.all():
+        print("Completed on loop", loopCount)
         print("AverageMSE:", averageMSE(clusterCenters, clusterList))
         print("MSS:", meanSquareSeparation(clusterCenters))
         print("MeanEntropy:", meanEntropy(clusterList))
@@ -185,11 +186,12 @@ def clusterIterate(trainingSet, clusterCenters, testData):
             else:
                 testList[minIndex].append(np.array(data))
         confusionMatrix(testList)
-        generateGreyscaleImages(clusterCenters)
+        #generateGreyscaleImages(clusterCenters)
         return
     else:
+        print("Loop",loopCount)
         # Otherwise, keep iterating
-        return clusterIterate(trainingSet, updatedClusterCenters, testData)
+        return clusterIterate(trainingSet, updatedClusterCenters, testData, loopCount+1)
 
 if __name__ == '__main__':
     # Change this to point to the right working directory. # # # # # # # # # # # #
@@ -204,4 +206,4 @@ if __name__ == '__main__':
     # the clusterIterate method will print data to console and create the greyscale images in the cwd
 
     centers = init_clusters(30, trainingData)
-    clusterIterate(trainingData, centers, testData)
+    clusterIterate(trainingData, centers, testData, 0)
