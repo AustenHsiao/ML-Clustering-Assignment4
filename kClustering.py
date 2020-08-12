@@ -1,4 +1,6 @@
-#Written for CS545 Assignment 4 by Austen Hsiao, 985647212
+# Written for CS545 Assignment 4 by Austen Hsiao, 985647212
+
+# Scroll to the very bottom for a brief readme on how to run this script. You only need to change the value for K (clusters)
 
 import numpy as np
 import pandas as pd
@@ -96,21 +98,6 @@ def meanEntropy(clusterMembers):
         meanEntropy += (mi/m)*entropy
     return meanEntropy
 
-def accuracy(clusterMembers):
-    hits = 0
-    total = 0
-    for singleCluster in clusterMembers:
-        counts = {}
-        total += len(singleCluster)
-        for point in singleCluster:
-            if point[-1] in counts.keys():
-                counts[point[-1]] += 1
-            else:
-                counts[point[-1]] = 1
-        classLabel = max(counts, key=counts.get)
-        hits += counts[classLabel]
-    return hits/total
-
 def confusionMatrix(clusterMembers):
     classLabelsByCluster = [] #this array will contain the class labels for the corresponding cluster. eg. classLabelsByCluster[0] = 2 means that the class for cluster 0 is 2
     for singleCluster in clusterMembers:
@@ -145,9 +132,31 @@ def generateGreyscaleImages(clusterCenters):
         (Image.fromarray(np.uint8(center*scale), 'L')).save(str(currIndex) + ".png")
         currIndex += 1
 
+def accuracy(clusterMembers, clusterCenters, testData):
+    # clusterMembers comes from the trainingData
+    # clusterCenters contains the centers for each cluster
+    # testData is unadulterated test data
+    clusterClass = []
+    for singleCluster in clusterMembers:
+        counts = [0] * 10
+        for trainingPoint in singleCluster:
+            counts[trainingPoint[-1]] += 1
+        highest = max(counts)
+        cluster = random.choice([i for i in range(len(counts)) if counts[i] == highest]) #in case there is a tie
+        clusterClass.append(cluster)
+
+    # At this point, clusterClass contains a list of the class of each cluster. eg. clusterClass[5] = 3 ==> the 6th cluster has a class of 3    
+    total = len(testData)
+    hit = 0
+    for point in testData:
+        memberCluster = minDistanceIndex(point, clusterCenters)
+        if clusterClass[memberCluster] == point[-1]:
+            hit += 1
+    return hit/total
+
 
 # Performs iterations with the trainingSet and an initial np array of clusterCenters until the previous centers and the new centers are the same
-def clusterIterate(trainingSet, clusterCenters):
+def clusterIterate(trainingSet, clusterCenters, testData):
     clusterList = [[]] * len(clusterCenters)
 
     for data in trainingSet:
@@ -166,21 +175,33 @@ def clusterIterate(trainingSet, clusterCenters):
         print("AverageMSE:", averageMSE(clusterCenters, clusterList))
         print("MSS:", meanSquareSeparation(clusterCenters))
         print("MeanEntropy:", meanEntropy(clusterList))
-        print("Accuracy:", accuracy(clusterList))
-        confusionMatrix(clusterList)
+        print("Accuracy:", accuracy(clusterList, clusterCenters, testData))
+
+        testList = [[]] * len(clusterCenters)
+        for data in testData:
+            minIndex = minDistanceIndex(data, clusterCenters)
+            if testList[minIndex] == []:
+                testList[minIndex] = [data]
+            else:
+                testList[minIndex].append(np.array(data))
+        confusionMatrix(testList)
         generateGreyscaleImages(clusterCenters)
         return
     else:
         # Otherwise, keep iterating
-        return clusterIterate(trainingSet, updatedClusterCenters)
+        return clusterIterate(trainingSet, updatedClusterCenters, testData)
 
 if __name__ == '__main__':
     # Change this to point to the right working directory. # # # # # # # # # # # #
     os.chdir('C:\\Users\\Austen\\Desktop\\Sourcefiles\\Python\\Assignment4')
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    # This also assumes that we're running the py script up one level from the optdigits files
+    # This also assumes that we're running the py script up one level from the optdigits files (the optdigit folder is in the same directory we are)
     trainingData = open_file('optdigits\\optdigits.train')
+    testData = open_file('optdigits\\optdigits.test')
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    # To run the script, change
+    #   "centers = init_clusters(K, trainingData)"" where K is the number of clusters you want. 
+    # the clusterIterate method will print data to console and create the greyscale images in the cwd
 
-    centers = init_clusters(10, trainingData)
-    clusterIterate(trainingData, centers)
+    centers = init_clusters(30, trainingData)
+    clusterIterate(trainingData, centers, testData)
