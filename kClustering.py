@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import random
 import math
+from PIL import Image
 
 random.seed()
 
@@ -72,6 +73,79 @@ def meanSquareSeparation(clusterCenters):
     total = total / 2.0 # Since we have duplicates eg. every center is paired twice (AB vs BA)
     return total/count
 
+def entropyForCluster(singleClusterMembers):
+    total = len(singleClusterMembers)
+    counts = {}
+    for point in singleClusterMembers:
+        if point[-1] in counts.keys():
+            counts[point[-1]] += 1
+        else:
+            counts[point[-1]] = 1
+    runningTotal = 0
+    for i in counts.keys():
+        x = (counts.get(i)/total)
+        runningTotal += x * math.log2(x)
+    return -1*runningTotal
+
+def meanEntropy(clusterMembers):
+    meanEntropy = 0
+    m = sum([len(i) for i in clusterMembers])
+    for cluster in clusterMembers:
+        mi = len(cluster)
+        entropy = entropyForCluster(cluster)
+        meanEntropy += (mi/m)*entropy
+    return meanEntropy
+
+def accuracy(clusterMembers):
+    hits = 0
+    total = 0
+    for singleCluster in clusterMembers:
+        counts = {}
+        total += len(singleCluster)
+        for point in singleCluster:
+            if point[-1] in counts.keys():
+                counts[point[-1]] += 1
+            else:
+                counts[point[-1]] = 1
+        classLabel = max(counts, key=counts.get)
+        hits += counts[classLabel]
+    return hits/total
+
+def confusionMatrix(clusterMembers):
+    classLabelsByCluster = [] #this array will contain the class labels for the corresponding cluster. eg. classLabelsByCluster[0] = 2 means that the class for cluster 0 is 2
+    for singleCluster in clusterMembers:
+        counts = {}
+        for point in singleCluster:
+            if point[-1] in counts.keys():
+                counts[point[-1]] += 1
+            else:
+                counts[point[-1]] = 1
+        classLabelsByCluster.append(max(counts, key=counts.get))
+    print("Cluster class labels:", classLabelsByCluster)
+    confusionMatrix = np.zeros([10,10], dtype=int) # This is hardcoded because there are 10 digits
+
+    clusterNumber = 0
+    for singleCluster in clusterMembers:
+        for point in singleCluster:
+            column = classLabelsByCluster[clusterNumber]
+            row = point[-1]
+            confusionMatrix[row][column] += 1
+        clusterNumber += 1
+
+    print("Confusion Matrix:")
+    for i in confusionMatrix:
+        print(i)
+
+def generateGreyscaleImages(clusterCenters):
+    scale = 255/16.0
+    currIndex = 0
+    for cluster in clusterCenters:
+        center = cluster[:-1]
+        center.resize((8,8))
+        (Image.fromarray(np.uint8(center*scale), 'L')).save(str(currIndex) + ".png")
+        currIndex += 1
+
+
 # Performs iterations with the trainingSet and an initial np array of clusterCenters until the previous centers and the new centers are the same
 def clusterIterate(trainingSet, clusterCenters):
     clusterList = [[]] * len(clusterCenters)
@@ -89,10 +163,12 @@ def clusterIterate(trainingSet, clusterCenters):
     # If the updatedClusters are equal to the original clusters, we're finished looping
     compare = (updatedClusterCenters == clusterCenters)
     if compare.all():
-        #calculated average mse
         print("AverageMSE:", averageMSE(clusterCenters, clusterList))
         print("MSS:", meanSquareSeparation(clusterCenters))
-                
+        print("MeanEntropy:", meanEntropy(clusterList))
+        print("Accuracy:", accuracy(clusterList))
+        confusionMatrix(clusterList)
+        generateGreyscaleImages(clusterCenters)
         return
     else:
         # Otherwise, keep iterating
